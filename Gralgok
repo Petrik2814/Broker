@@ -1,0 +1,380 @@
+<?xml version="1.0" encoding="utf-8"?>
+<CheatTable CheatEngineTableVersion="29">
+  <CheatEntries>
+    <CheatEntry>
+      <ID>6</ID>
+      <Description>"[X] &lt;== Stronghold HD v1.41 Steam Script 2.0"</Description>
+      <Options moHideChildren="1" moDeactivateChildrenAsWell="1"/>
+      <LastState/>
+      <Color>FF0000</Color>
+      <VariableType>Auto Assembler Script</VariableType>
+      <AssemblerScript>{
+===========================================
+ Game Title    : Stronghold HD
+ Game Version  : 1.41
+ Game Sponsor  : Myself (2016)
+ Process Name  : Stronghold.exe
+ Relevant Info : Old Game/32bits(old)/RTS
+ Script Version: 2.0
+ CE Version    : 7.0
+ Release date  : 13-Mar-2021
+ Author        : Recifense
+ History:
+ 06-Jul-2016: First Release
+ 13-Mar-2021: Release for version 1.41 (s2.0)
+ Features:
+ - Minimum Gold
+ - Minimum Reputation
+ - God Mode
+ - Some Pointers
+===========================================
+}
+
+//=========================================
+// Checking CE version
+{$lua}
+  if(getCEVersion() &lt; 7.0) then
+    ShowMessage('Sorry. CE version should be 7.0 or above')
+  end
+{$asm}
+
+//=========================================
+// Checking Selected Process
+{$lua}
+  if(process == nil) then
+    ShowMessage('No process was selected')
+  elseif (string.upper(process) ~= string.upper("Stronghold.exe")) then
+    ShowMessage('Warning. Expected Process = Stronghold.exe')
+  end
+{$asm}
+
+//=========================================
+{$lua}
+--  monoAA_USEMONO(process,false)
+  if waitForPDB then --this way older CE versions are unaffected (By Dark Byte)
+    waitForPDB()
+  end
+{$asm}
+
+//=========================================
+// Definitions
+define(LUDO,"Stronghold.exe")
+define(MOHP,Stronghold.exe+0002C9B9) //#
+define(GDMD,Stronghold.exe+000F45BF) //#
+define(GMD2,Stronghold.exe+000F4FCE) //#
+
+define(PRID,Stronghold.exe+00BB853C) //#
+define(GOLD,Stronghold.exe+007DEF6C) //#
+define(REPU,Stronghold.exe+007DEAC0) //#
+
+//=========================================
+// Constants used in the script (that can be changed)
+define(ctCE70,(float)7.0)
+
+//=========================================
+[ENABLE]
+//=========================================
+//LuaCall(CheckVersion())
+//=========================================
+// Check if script is compatible to this game version
+// If false the script will not be loaded
+
+assert(MOHP,69 c9 58 17 00 00 8b 91 ?? ?? ?? ?? B8 1f 85 eb 51 F7 EA 8B 81)
+assert(GDMD,29 9c 37 60 06 00 00 83 bc 37 60 06 00 00 00 ?? ?? c7 84 37 60)
+assert(GMD2,29 8c 3e 60 06 00 00 33 db 39 9c 3e 60 06 00 00 ?? ?? 89 9c 3e)
+
+//=========================================
+alloc(MyCode,4096,$process)
+//=========================================
+// Declaration section
+label(_MonHumanPlayer)
+label(_MonHP00)
+label(_BackMHP)
+label(_ExitMHP)
+label(_GodMode)
+label(_BackGMD)
+label(_ExitGMD)
+label(_GodMode2)
+label(_BackGM2)
+label(_ExitGM2)
+
+label(iEnableGLD)
+label(iEnableREP)
+label(iEnableGMD)
+
+label(pUnit)
+
+//=========================================
+// Registering Symbols
+registersymbol(MyCode)
+registersymbol(iEnableGLD)
+registersymbol(iEnableREP)
+registersymbol(iEnableGMD)
+registersymbol(pUnit)
+
+//=========================================
+MyCode:
+//========================================= v1.41 #
+// All the time
+// EDX = free
+_MonHumanPlayer:
+ imul ecx,ecx,00001758             // Original code (ECX=PlayerID)
+
+ cmp dword ptr [iEnableGLD],0
+ je _MonHP00                       // Jump if feature is disabled
+
+ mov edx,#700
+ cmp edx,[ecx+GOLD]
+ js _MonHP00
+
+ mov [ecx+GOLD],edx
+
+_MonHP00:
+ cmp dword ptr [iEnableREP],0
+ je _ExitMHP                       // Jump if feature is disabled
+
+ mov edx,#7000
+ cmp edx,[ecx+REPU]
+ js _ExitMHP
+
+ mov [ecx+REPU],edx
+
+_ExitMHP:
+ jmp _BackMHP                      // Back to main code
+
+//========================================= v1.41 #
+// During Combat (units)
+_GodMode:
+ push eax
+
+ cmp dword ptr [iEnableGMD],0
+ je _ExitGMD                       // Jump if feature is disabled
+
+ movzx eax,byte ptr [edi+esi+00000318]
+ cmp eax,[PRID]
+ jne _ExitGMD
+
+ xor ebx,ebx
+ mov eax,#7000000
+ mov [edi+esi+00000660],eax
+ mov [edi+esi+00000664],eax
+
+_ExitGMD:
+ pop eax
+
+ sub [edi+esi+00000660],ebx        // Original code (dec HP)
+ jmp _BackGMD                      // Back to main code
+
+//========================================= v1.41 #
+// During Combat (units)
+_GodMode2:
+ cmp dword ptr [iEnableGMD],0
+ je _ExitGM2                       // Jump if feature is disabled
+
+ movzx ebx,byte ptr [esi+edi+00000318]
+ cmp ebx,[PRID]
+ jne _ExitGM2
+
+ xor ecx,ecx
+ mov ebx,#7000000
+ mov [esi+edi+00000660],ebx
+ mov [esi+edi+00000664],ebx
+
+_ExitGM2:
+ sub [esi+edi+00000660],ecx        // Original code (dec HP)
+ jmp _BackGM2                      // Back to main code
+
+//=========================================
+align 10,'='
+//=========================================
+ db '===============================&gt;'
+ db 'CE7.0 Script by Recifense 210313'
+//=========================================
+// Variables
+iEnableGLD:
+ dd 0
+iEnableREP:
+ dd 0
+iEnableGMD:
+ dd 0
+pUnit:
+ dd 0
+
+//=========================================
+// Hacking Points
+MOHP:
+ jmp _MonHumanPlayer
+ nop
+_BackMHP:
+
+GDMD:
+ jmp _GodMode
+ nop
+ nop
+_BackGMD:
+
+GMD2:
+ jmp _GodMode2
+ nop
+ nop
+_BackGM2:
+
+//=========================================
+// Script for Restoring Original Codes
+[DISABLE]
+MOHP:
+// imul ecx,ecx,00001758
+ db 69 c9 58 17 00 00
+
+GDMD:
+// sub [edi+esi+00000660],ebx
+ db 29 9c 37 60 06 00 00
+
+GMD2:
+// sub [esi+edi+00000660],ecx
+ db 29 8c 3e 60 06 00 00
+
+//=========================================
+// Unregistering Symbols
+unregistersymbol(MyCode)
+unregistersymbol(iEnableGLD)
+unregistersymbol(iEnableREP)
+unregistersymbol(iEnableGMD)
+unregistersymbol(pUnit)
+
+//=========================================
+dealloc(MyCode)
+//============= Scripts End ===============
+
+// ****************************************
+// NOTES
+// ****************************************
+{
+}
+</AssemblerScript>
+      <CheatEntries>
+        <CheatEntry>
+          <ID>7</ID>
+          <Description>"[X] &lt;== Minimum Gold"</Description>
+          <LastState/>
+          <Color>C08000</Color>
+          <VariableType>Auto Assembler Script</VariableType>
+          <AssemblerScript>[enable]
+{$LUA}
+writeInteger("iEnableGLD",1)
+memrec.Color=0x0004000
+{$ASM}
+
+[disable]
+{$LUA}
+writeInteger("iEnableGLD",0)
+memrec.Color=0x0c08000
+{$ASM}
+</AssemblerScript>
+        </CheatEntry>
+        <CheatEntry>
+          <ID>8</ID>
+          <Description>"[X] &lt;== Minimum Reputation"</Description>
+          <LastState/>
+          <Color>C08000</Color>
+          <VariableType>Auto Assembler Script</VariableType>
+          <AssemblerScript>[enable]
+{$LUA}
+writeInteger("iEnableREP",1)
+memrec.Color=0x0004000
+{$ASM}
+
+[disable]
+{$LUA}
+writeInteger("iEnableREP",0)
+memrec.Color=0x0c08000
+{$ASM}
+</AssemblerScript>
+        </CheatEntry>
+        <CheatEntry>
+          <ID>9</ID>
+          <Description>"[X] &lt;== God Mode"</Description>
+          <LastState/>
+          <Color>C08000</Color>
+          <VariableType>Auto Assembler Script</VariableType>
+          <AssemblerScript>[enable]
+{$LUA}
+writeInteger("iEnableGMD",1)
+memrec.Color=0x0004000
+{$ASM}
+
+[disable]
+{$LUA}
+writeInteger("iEnableGMD",0)
+memrec.Color=0x0c08000
+{$ASM}
+</AssemblerScript>
+        </CheatEntry>
+      </CheatEntries>
+    </CheatEntry>
+    <CheatEntry>
+      <ID>228</ID>
+      <Description>"[X] &lt;== Table/Script Information"</Description>
+      <Options moHideChildren="1"/>
+      <LastState/>
+      <Color>0000FF</Color>
+      <VariableType>Auto Assembler Script</VariableType>
+      <AssemblerScript>[enable]
+define(test,LUDO)
+
+{$LUA}
+getMainForm().CommentButton.doClick()
+{$ASM}
+
+[disable]
+
+</AssemblerScript>
+    </CheatEntry>
+  </CheatEntries>
+  <UserdefinedSymbols/>
+  <Comments>===========================================
+ Game Title    : Stronghold HD
+ Game Version  : 1.41
+ Game Sponsor  : Myself (2016)
+ Process Name  : Stronghold.exe
+ Relevant Info : Old Game/32bits(old)/RTS
+ Script Version: 2.0
+ CE Version    : 7.0
+ Release date  : 13-Mar-2021
+ Author        : Recifense
+ History:
+ 06-Jul-2016: First Release
+ 13-Mar-2021: Release for version 1.41 (s2.0)
+ Features:
+ - Minimum Gold             [1]
+ - Minimum Reputation       [2]
+ - God Mode                 [3]
+ - Some Pointers            [4]
+===========================================
+[1] Human Player's gold will not go under minimum value (700);
+[2] Human Player's Reputation will not go under minimum value (7000);
+[3] For Human Player's Buildings and units;
+[4] Not used
+===========================================
+[USAGE]
+1) Run CE70;
+2) Run Game;
+3) Load the game process "Stronghold.exe" in CE;
+4) Load this table and activate it;
+5) Now activate the options you want to use by checking each box ([X]);
+6) Game On;
+===========================================
+HOTKEYS:
+ - none defined
+===========================================
+[NOTE] This game is complicated, so I don't intend to add any additional cheat.
+===========================================
+[ADVICE]
+When you can,save the game before starting using table/cheat. So you can always come back in case you don't like the result.
+===========================================
+[INFO]
+Tested on Win 10 64bits
+===========================================
+Cheers 
+</Comments>
+</CheatTable>
